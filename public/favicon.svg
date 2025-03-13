@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Background -->
+  <circle cx="32" cy="32" r="30" fill="#0a3b5c" />
+  
+  <!-- Ship hull -->
+  <path d="M32 10 L42 45 L22 45 Z" fill="#4dabf5" stroke="#ffffff" stroke-width="2" />
+  
+  <!-- Ship details -->
+  <rect x="28" y="25" width="8" height="10" fill="#333333" />
+  
+  <!-- Waves -->
+  <path d="M10 50 Q16 45, 22 50 Q28 55, 34 50 Q40 45, 46 50 Q52 55, 58 50" 
+        fill="none" stroke="#ffffff" stroke-width="2" />
+</svg> 

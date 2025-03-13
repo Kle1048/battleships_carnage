@@ -1,0 +1,100 @@
+# Battleship Carnage - Cursor Rules
+
+# Project Structure
+structure:
+  - /src:
+    - /client: Frontend code
+      - /components: React components
+      - /game: Game logic
+        - /engine: Core game engine
+        - /entities: Game entities (ships, projectiles)
+        - /physics: Movement and collision
+        - /rendering: WebGL rendering
+      - /assets: Game assets
+        - /images: Sprites and textures
+        - /audio: Sound effects and music
+      - /utils: Utility functions
+      - /network: Client-side networking
+    - /server: Backend code
+      - /game: Game logic
+      - /network: WebSocket handling
+      - /db: Database interactions
+      - /utils: Utility functions
+    - /shared: Code shared between client and server
+      - /constants: Game constants
+      - /types: TypeScript type definitions
+      - /utils: Shared utility functions
+  - /public: Static assets
+  - /tests: Test files
+  - /docs: Documentation
+
+# Naming Conventions
+naming:
+  - components: PascalCase
+  - functions: camelCase
+  - variables: camelCase
+  - constants: UPPER_SNAKE_CASE
+  - files:
+    - components: PascalCase
+    - others: camelCase
+  - css: kebab-case
+
+# Code Style
+style:
+  - indentation: 2 spaces
+  - quotes: single
+  - semicolons: required
+  - max_line_length: 100
+  - trailing_comma: es5
+
+# TypeScript Configuration
+typescript:
+  - strict: true
+  - noImplicitAny: true
+  - noUnusedLocals: true
+  - noUnusedParameters: true
+
+# Testing
+testing:
+  - framework: Jest
+  - coverage_threshold: 70
+  - required_for:
+    - /src/game/engine
+    - /src/game/physics
+    - /src/server/game
+
+# Documentation
+documentation:
+  - required_for:
+    - public functions
+    - components
+    - game entities
+  - format: JSDoc
+
+# Git
+git:
+  - branch_naming: feature/*, bugfix/*, hotfix/*
+  - commit_message_format: "type(scope): message"
+  - types:
+    - feat: New feature
+    - fix: Bug fix
+    - docs: Documentation
+    - style: Formatting
+    - refactor: Code restructuring
+    - test: Tests
+    - chore: Build tasks, etc.
+
+# Dependencies
+dependencies:
+  - frontend:
+    - react: ^18.2.0
+    - three.js: ^0.150.0
+    - socket.io-client: ^4.6.0
+    - redux: ^4.2.0
+    - typescript: ^5.0.0
+  - backend:
+    - node.js: ^18.0.0
+    - socket.io: ^4.6.0
+    - express: ^4.18.0
+    - postgresql: ^8.10.0
+    - redis: ^4.6.0

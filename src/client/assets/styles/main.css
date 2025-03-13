@@ -1,0 +1,131 @@
+:root {
+  --primary-color: #0a192f;
+  --secondary-color: #172a45;
+  --accent-color: #64ffda;
+  --text-color: #e6f1ff;
+  --text-secondary-color: #8892b0;
+  --danger-color: #ff6b6b;
+  --success-color: #4caf50;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  padding: 20px;
+}
+
+.hud-element {
+  background-color: rgba(23, 42, 69, 0.7);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+  pointer-events: auto;
+}
+
+.loading-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--primary-color);
+  z-index: 100;
+}
+
+.button {
+  background-color: var(--secondary-color);
+  color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background-color: rgba(100, 255, 218, 0.1);
+}
+
+.button:active {
+  transform: translateY(2px);
+}
+
+.menu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--secondary-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 300px;
+  z-index: 10;
+}
+
+.menu-title {
+  font-size: 24px;
+  margin-bottom: 20px;
+  text-align: center;
+  color: var(--accent-color);
+}
+
+.menu-item {
+  margin-bottom: 15px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--primary-color);
+  border: 1px solid var(--text-secondary-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 16px;
+}
+
+.input-field:focus {
+  border-color: var(--accent-color);
+  outline: none;
+} 
