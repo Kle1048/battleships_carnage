@@ -7,8 +7,11 @@ import { Vector2 } from '@shared/types/Vector';
 class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private waterPattern: CanvasPattern | null = null;
-  private waterOffset: Vector2 = { x: 0, y: 0 };
+  private gridSize: number = 100; // Smaller grid size for more visible movement
+  private gridColor: string = 'rgba(255, 255, 255, 0.3)'; // More visible grid lines
+  
+  // Track if HUD has been initialized
+  private hudInitialized: boolean = false;
   
   /**
    * Creates a new renderer
@@ -24,9 +27,6 @@ class Renderer {
     
     this.ctx = context;
     
-    // Create water pattern
-    this.createWaterPattern();
-    
     // Set initial canvas size
     this.updateViewport();
   }
@@ -37,9 +37,6 @@ class Renderer {
   public updateViewport(): void {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
-    
-    // Recreate water pattern when viewport changes
-    this.createWaterPattern();
   }
   
   /**
@@ -47,32 +44,21 @@ class Renderer {
    */
   public clear(): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Fill with dark blue background
+    this.ctx.fillStyle = '#0a2a5e';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
   
   /**
-   * Renders the water background
+   * Renders the background grid
    * @param cameraPosition The camera position
    */
-  public renderWater(cameraPosition: Vector2): void {
-    if (!this.waterPattern) {
-      this.createWaterPattern();
-    }
-    
-    // Update water offset based on camera position
-    this.waterOffset = {
-      x: -cameraPosition.x * 0.1 % 200,
-      y: -cameraPosition.y * 0.1 % 200
-    };
-    
-    // Fill canvas with water pattern
-    this.ctx.save();
-    this.ctx.fillStyle = this.waterPattern || '#1a75ff';
-    this.ctx.translate(this.waterOffset.x, this.waterOffset.y);
-    this.ctx.fillRect(-this.waterOffset.x, -this.waterOffset.y, this.canvas.width, this.canvas.height);
-    this.ctx.restore();
-    
-    // Draw grid lines for reference
+  public renderBackground(cameraPosition: Vector2): void {
+    // Draw grid for reference
     this.renderGrid(cameraPosition);
+    
+    // Draw coordinate axes for better orientation
+    this.renderCoordinateAxes(cameraPosition);
   }
   
   /**
@@ -80,19 +66,16 @@ class Renderer {
    * @param cameraPosition The camera position
    */
   private renderGrid(cameraPosition: Vector2): void {
-    const gridSize = 500;
-    const gridColor = 'rgba(255, 255, 255, 0.1)';
-    
     this.ctx.save();
-    this.ctx.strokeStyle = gridColor;
+    this.ctx.strokeStyle = this.gridColor;
     this.ctx.lineWidth = 1;
     
     // Calculate grid offset
-    const offsetX = this.canvas.width / 2 - cameraPosition.x % gridSize;
-    const offsetY = this.canvas.height / 2 - cameraPosition.y % gridSize;
+    const offsetX = this.canvas.width / 2 - cameraPosition.x % this.gridSize;
+    const offsetY = this.canvas.height / 2 - cameraPosition.y % this.gridSize;
     
     // Draw vertical lines
-    for (let x = offsetX; x < this.canvas.width; x += gridSize) {
+    for (let x = offsetX; x < this.canvas.width; x += this.gridSize) {
       this.ctx.beginPath();
       this.ctx.moveTo(x, 0);
       this.ctx.lineTo(x, this.canvas.height);
@@ -100,11 +83,65 @@ class Renderer {
     }
     
     // Draw horizontal lines
-    for (let y = offsetY; y < this.canvas.height; y += gridSize) {
+    for (let y = offsetY; y < this.canvas.height; y += this.gridSize) {
       this.ctx.beginPath();
       this.ctx.moveTo(0, y);
       this.ctx.lineTo(this.canvas.width, y);
       this.ctx.stroke();
+    }
+    
+    this.ctx.restore();
+  }
+  
+  /**
+   * Renders coordinate axes for better orientation
+   * @param cameraPosition The camera position
+   */
+  private renderCoordinateAxes(cameraPosition: Vector2): void {
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    
+    this.ctx.save();
+    
+    // X-axis (red)
+    this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, centerY - cameraPosition.y);
+    this.ctx.lineTo(this.canvas.width, centerY - cameraPosition.y);
+    this.ctx.stroke();
+    
+    // Y-axis (green)
+    this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX - cameraPosition.x, 0);
+    this.ctx.lineTo(centerX - cameraPosition.x, this.canvas.height);
+    this.ctx.stroke();
+    
+    // Origin marker
+    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
+    this.ctx.beginPath();
+    this.ctx.arc(centerX - cameraPosition.x, centerY - cameraPosition.y, 5, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    // Draw coordinates at intervals
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '10px Arial';
+    
+    // X-axis coordinates
+    for (let x = Math.floor(cameraPosition.x / 500) * 500; x < cameraPosition.x + this.canvas.width; x += 500) {
+      const screenX = centerX + (x - cameraPosition.x);
+      if (screenX >= 0 && screenX <= this.canvas.width) {
+        this.ctx.fillText(x.toString(), screenX, centerY - cameraPosition.y + 15);
+      }
+    }
+    
+    // Y-axis coordinates
+    for (let y = Math.floor(cameraPosition.y / 500) * 500; y < cameraPosition.y + this.canvas.height; y += 500) {
+      const screenY = centerY + (y - cameraPosition.y);
+      if (screenY >= 0 && screenY <= this.canvas.height) {
+        this.ctx.fillText(y.toString(), centerX - cameraPosition.x + 5, screenY);
+      }
     }
     
     this.ctx.restore();
@@ -120,7 +157,23 @@ class Renderer {
     const screenX = this.canvas.width / 2 + (entity.position.x - cameraPosition.x);
     const screenY = this.canvas.height / 2 + (entity.position.y - cameraPosition.y);
     
-    console.log('Rendering entity at screen position:', screenX, screenY);
+    // Draw a position marker (crosshair) at the entity's position
+    this.ctx.save();
+    this.ctx.strokeStyle = '#FF0000';
+    this.ctx.lineWidth = 2;
+    
+    // Horizontal line
+    this.ctx.beginPath();
+    this.ctx.moveTo(screenX - 10, screenY);
+    this.ctx.lineTo(screenX + 10, screenY);
+    this.ctx.stroke();
+    
+    // Vertical line
+    this.ctx.beginPath();
+    this.ctx.moveTo(screenX, screenY - 10);
+    this.ctx.lineTo(screenX, screenY + 10);
+    this.ctx.stroke();
+    this.ctx.restore();
     
     this.ctx.save();
     
@@ -142,78 +195,173 @@ class Renderer {
     this.ctx.fill();
     this.ctx.stroke(); // Add outline
     
-    // Draw ship name for debugging
+    this.ctx.restore();
+    
+    // Draw ship name horizontally under the ship (not rotating with the ship)
+    this.ctx.save();
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.font = '12px Arial';
-    this.ctx.fillText(entity.name || 'Unknown', 0, entity.height / 2 + 20);
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(entity.name || 'Unknown', screenX, screenY + entity.height / 2 + 20);
+    this.ctx.restore();
+  }
+  
+  /**
+   * Renders the HUD (Heads-Up Display) with naval controls
+   * @param playerShip The player's ship
+   */
+  public renderHUD(playerShip: Ship): void {
+    if (!('getSpeedSettingName' in playerShip && 'getRudderSettingName' in playerShip)) {
+      return; // Skip if ship doesn't have naval controls
+    }
+    
+    // Log HUD initialization once
+    if (!this.hudInitialized) {
+      console.log('Initializing HUD for player ship:', playerShip.name);
+      this.hudInitialized = true;
+    }
+    
+    // Render the ship controls panel
+    this.renderShipControlsPanel(playerShip);
+    
+    // Render the help box in the lower right corner
+    this.renderHelpBox();
+  }
+  
+  /**
+   * Renders the ship controls panel in the upper left corner
+   * @param playerShip The player's ship
+   */
+  private renderShipControlsPanel(playerShip: Ship): void {
+    const padding = 15;
+    const panelWidth = 180;
+    const panelHeight = 120;
+    const cornerRadius = 8;
+    
+    this.ctx.save();
+    
+    // Draw semi-transparent panel background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.roundRect(padding, padding, panelWidth, panelHeight, cornerRadius);
+    this.ctx.fill();
+    
+    // Draw panel border
+    this.ctx.strokeStyle = 'rgba(0, 120, 215, 0.7)'; // Blue border for ship panel
+    this.ctx.lineWidth = 2;
+    this.roundRect(padding, padding, panelWidth, panelHeight, cornerRadius);
+    this.ctx.stroke();
+    
+    // Draw title
+    this.ctx.fillStyle = '#00AAFF'; // Bright blue for ship name
+    this.ctx.font = 'bold 14px Arial';
+    this.ctx.fillText(playerShip.name, padding + 10, padding + 20);
+    
+    // Draw separator line
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(padding + 5, padding + 30);
+    this.ctx.lineTo(padding + panelWidth - 5, padding + 30);
+    this.ctx.stroke();
+    
+    // Draw ship info
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = '12px Arial';
+    this.ctx.fillText(`Health: ${playerShip.health}`, padding + 10, padding + 50);
+    this.ctx.fillText(`Position: (${playerShip.position.x.toFixed(0)}, ${playerShip.position.y.toFixed(0)})`, padding + 10, padding + 70);
+    
+    // Draw speed controls
+    this.ctx.fillStyle = '#FFCC33';
+    this.ctx.font = 'bold 12px Arial';
+    this.ctx.fillText('SPEED:', padding + 10, padding + 90);
+    
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = '12px Arial';
+    this.ctx.fillText(playerShip.getSpeedSettingName(), padding + 70, padding + 90);
+    
+    // Draw rudder controls - text only, no indicator
+    this.ctx.fillStyle = '#FFCC33';
+    this.ctx.font = 'bold 12px Arial';
+    this.ctx.fillText('RUDDER:', padding + 10, padding + 110);
+    
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = '12px Arial';
+    this.ctx.fillText(playerShip.getRudderSettingName(), padding + 70, padding + 110);
     
     this.ctx.restore();
   }
   
   /**
-   * Renders a health bar for an entity
-   * @param entity The entity to render the health bar for
+   * Renders a help box in the lower right corner
    */
-  private renderHealthBar(entity: Ship): void {
-    const barWidth = entity.width;
-    const barHeight = 5;
-    const barY = entity.height / 2 + 10;
+  private renderHelpBox(): void {
+    const padding = 20;
+    const panelWidth = 220; // Increased width to fit longer text
+    const panelHeight = 160; // Increased height to fit more controls
+    const cornerRadius = 10;
+    const x = this.canvas.width - panelWidth - padding;
+    const y = this.canvas.height - panelHeight - padding;
     
-    // Background
-    this.ctx.fillStyle = '#333333';
-    this.ctx.fillRect(-barWidth / 2, barY, barWidth, barHeight);
+    this.ctx.save();
     
-    // Health fill
-    const healthPercent = Math.max(0, entity.health) / 100;
-    const healthWidth = barWidth * healthPercent;
+    // Draw semi-transparent panel background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.roundRect(x, y, panelWidth, panelHeight, cornerRadius);
+    this.ctx.fill();
     
-    // Choose color based on health
-    let healthColor = '#00FF00'; // Green
-    if (healthPercent < 0.3) {
-      healthColor = '#FF0000'; // Red
-    } else if (healthPercent < 0.6) {
-      healthColor = '#FFFF00'; // Yellow
-    }
+    // Draw panel border
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    this.ctx.lineWidth = 2;
+    this.roundRect(x, y, panelWidth, panelHeight, cornerRadius);
+    this.ctx.stroke();
     
-    this.ctx.fillStyle = healthColor;
-    this.ctx.fillRect(-barWidth / 2, barY, healthWidth, barHeight);
+    // Draw title
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = 'bold 14px Arial';
+    this.ctx.fillText('NAVAL CONTROLS', x + 15, y + 25);
+    
+    // Draw separator line
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + 10, y + 35);
+    this.ctx.lineTo(x + panelWidth - 10, y + 35);
+    this.ctx.stroke();
+    
+    // Draw controls
+    this.ctx.font = '12px Arial';
+    this.ctx.fillText('W: Increase Speed Forward', x + 15, y + 55);
+    this.ctx.fillText('S: Decrease Speed / Reverse', x + 15, y + 75);
+    this.ctx.fillText('A/D: Turn Rudder', x + 15, y + 95);
+    this.ctx.fillText('Space: Center Rudder', x + 15, y + 115);
+    
+    // Draw ship physics info
+    this.ctx.fillStyle = '#FFCC33';
+    this.ctx.fillText('Ship Physics:', x + 15, y + 135);
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.fillText('• Must have speed to turn', x + 15, y + 155);
+    
+    this.ctx.restore();
   }
   
   /**
-   * Creates a water pattern for the background
+   * Draws a rounded rectangle
+   * @param x X position
+   * @param y Y position
+   * @param width Width
+   * @param height Height
+   * @param radius Corner radius
    */
-  private createWaterPattern(): void {
-    // Create a small canvas for the pattern
-    const patternCanvas = document.createElement('canvas');
-    patternCanvas.width = 200;
-    patternCanvas.height = 200;
-    const patternCtx = patternCanvas.getContext('2d');
-    
-    if (!patternCtx) {
-      return;
-    }
-    
-    // Fill with base water color
-    patternCtx.fillStyle = '#1a75ff';
-    patternCtx.fillRect(0, 0, patternCanvas.width, patternCanvas.height);
-    
-    // Add some variation
-    patternCtx.fillStyle = '#0066ff';
-    
-    // Draw random waves
-    for (let i = 0; i < 20; i++) {
-      const x = Math.random() * patternCanvas.width;
-      const y = Math.random() * patternCanvas.height;
-      const width = 20 + Math.random() * 40;
-      const height = 5 + Math.random() * 10;
-      
-      patternCtx.beginPath();
-      patternCtx.ellipse(x, y, width, height, 0, 0, Math.PI * 2);
-      patternCtx.fill();
-    }
-    
-    // Create pattern from the small canvas
-    this.waterPattern = this.ctx.createPattern(patternCanvas, 'repeat');
+  private roundRect(x: number, y: number, width: number, height: number, radius: number): void {
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + radius, y);
+    this.ctx.lineTo(x + width - radius, y);
+    this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    this.ctx.lineTo(x + width, y + height - radius);
+    this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    this.ctx.lineTo(x + radius, y + height);
+    this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    this.ctx.lineTo(x, y + radius);
+    this.ctx.quadraticCurveTo(x, y, x + radius, y);
+    this.ctx.closePath();
   }
 }
 

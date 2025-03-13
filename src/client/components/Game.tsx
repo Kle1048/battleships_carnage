@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import GameEngine from '../game/engine/GameEngine';
-import HUD from './HUD';
 
 interface GameProps {
   playerName: string;
@@ -33,7 +32,6 @@ const Game: React.FC<GameProps> = ({ playerName }) => {
   return (
     <div className="game-container">
       <canvas ref={canvasRef} />
-      <HUD playerName={playerName} gameEngine={gameEngineRef.current} />
     </div>
   );
 };

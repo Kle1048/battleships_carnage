@@ -109,22 +109,8 @@ function startGame(container: HTMLElement, canvas: HTMLCanvasElement, playerName
     console.error('Could not find welcome-screen element to remove');
   }
   
-  // Show game UI
-  const gameUI = document.createElement('div');
-  gameUI.id = 'game-ui';
-  gameUI.innerHTML = `
-    <div class="player-info">
-      <span id="player-name-display">${name}</span>
-      <span id="player-health">Health: 100</span>
-    </div>
-    <div class="game-controls">
-      <div class="control-hint">WASD: Move</div>
-      <div class="control-hint">Mouse: Aim</div>
-      <div class="control-hint">Click: Fire</div>
-    </div>
-  `;
-  container.appendChild(gameUI);
-  console.log('Game UI created and added to container');
+  // Remove the DOM-based HUD since we're using canvas-based HUD
+  // No need to create game-ui element anymore
   
   // Import the game engine dynamically
   import('./game/engine/GameEngine').then(({ default: GameEngine }) => {
@@ -137,14 +123,7 @@ function startGame(container: HTMLElement, canvas: HTMLCanvasElement, playerName
     gameEngine.start();
     console.log('Game engine started');
     
-    // Update player health display
-    setInterval(() => {
-      const healthDisplay = document.getElementById('player-health');
-      if (healthDisplay && gameEngine.playerShip) {
-        healthDisplay.textContent = `Health: ${Math.max(0, Math.floor(gameEngine.playerShip.health))}`;
-      }
-    }, 100);
-    console.log('Health update interval set');
+    // No need for health update interval since we're using canvas HUD
   }).catch(error => {
     console.error('Error loading GameEngine:', error);
   });

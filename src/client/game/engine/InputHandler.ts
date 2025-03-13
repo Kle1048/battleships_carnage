@@ -8,6 +8,7 @@ interface InputState {
   throttleDown: boolean;
   turnLeft: boolean;
   turnRight: boolean;
+  centerRudder: boolean;
   fire: boolean;
 }
 
@@ -20,6 +21,7 @@ class InputHandler {
     throttleDown: false,
     turnLeft: false,
     turnRight: false,
+    centerRudder: false,
     fire: false
   };
 
@@ -35,6 +37,9 @@ class InputHandler {
     // Set up mouse event listeners
     canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+    
+    console.log('InputHandler initialized and listening for keyboard/mouse events');
+    console.log('Controls: W/S = Speed, A/D = Rudder, Space = Center Rudder');
   }
 
   /**
@@ -79,22 +84,49 @@ class InputHandler {
    * @param isPressed Whether the key is pressed or released
    */
   private updateInputState(keyCode: string, isPressed: boolean): void {
+    let stateChanged = false;
+    
     switch (keyCode) {
       case 'KeyW':
-        this.inputState.throttleUp = isPressed;
+        if (this.inputState.throttleUp !== isPressed) {
+          this.inputState.throttleUp = isPressed;
+          stateChanged = true;
+          console.log(`Throttle Up (W): ${isPressed ? 'PRESSED' : 'RELEASED'}`);
+        }
         break;
       case 'KeyS':
-        this.inputState.throttleDown = isPressed;
+        if (this.inputState.throttleDown !== isPressed) {
+          this.inputState.throttleDown = isPressed;
+          stateChanged = true;
+          console.log(`Throttle Down (S): ${isPressed ? 'PRESSED' : 'RELEASED'}`);
+        }
         break;
       case 'KeyA':
-        this.inputState.turnLeft = isPressed;
+        if (this.inputState.turnLeft !== isPressed) {
+          this.inputState.turnLeft = isPressed;
+          stateChanged = true;
+          console.log(`Turn Left (A): ${isPressed ? 'PRESSED' : 'RELEASED'}`);
+        }
         break;
       case 'KeyD':
-        this.inputState.turnRight = isPressed;
+        if (this.inputState.turnRight !== isPressed) {
+          this.inputState.turnRight = isPressed;
+          stateChanged = true;
+          console.log(`Turn Right (D): ${isPressed ? 'PRESSED' : 'RELEASED'}`);
+        }
         break;
       case 'Space':
-        this.inputState.fire = isPressed;
+        if (this.inputState.centerRudder !== isPressed) {
+          this.inputState.centerRudder = isPressed;
+          stateChanged = true;
+          console.log(`Center Rudder (Space): ${isPressed ? 'PRESSED' : 'RELEASED'}`);
+        }
         break;
+    }
+    
+    // Log the current input state when it changes
+    if (stateChanged) {
+      console.log('Current input state:', JSON.stringify(this.inputState));
     }
   }
 

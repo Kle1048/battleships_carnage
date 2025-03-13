@@ -24,6 +24,12 @@ class PhysicsEngine {
    * @param deltaTime Time since last frame in seconds
    */
   public update(entities: Ship[], deltaTime: number): void {
+    // Debug log only if significant changes
+    if (entities.length > 0 && entities[0].currentSpeed > 1.0) {
+      const firstShip = entities[0];
+      console.log(`Physics: position=(${firstShip.position.x.toFixed(2)}, ${firstShip.position.y.toFixed(2)}), velocity=(${firstShip.velocity.x.toFixed(2)}, ${firstShip.velocity.y.toFixed(2)})`);
+    }
+    
     // Apply world boundaries
     this.enforceWorldBoundaries(entities);
     

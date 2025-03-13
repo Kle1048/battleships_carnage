@@ -27,6 +27,17 @@ class GameEngine {
   private lastNetworkUpdate: number = 0;
   private networkUpdateInterval: number = 100; // ms
   
+  // Add a camera position property to the class
+  private cameraPosition: Vector2 = { x: 0, y: 0 };
+  private cameraLerpFactor: number = 0.02; // Reduced from 0.05 to make ship movement even more noticeable
+  
+  // Add properties to track previous input state
+  private lastThrottleUp: boolean = false;
+  private lastThrottleDown: boolean = false;
+  private lastTurnLeft: boolean = false;
+  private lastTurnRight: boolean = false;
+  private lastCenterRudder: boolean = false;
+  
   /**
    * Creates a new game engine instance
    * @param canvas The canvas element to render to
@@ -47,14 +58,18 @@ class GameEngine {
       position: { x: 0, y: 0 }, // Center of the screen
       rotation: 0,
       scale: { x: 1, y: 1 },
-      maxSpeed: 5,
-      rotationSpeed: 0.05,
-      acceleration: 0.1,
+      maxSpeed: 60, // Increased from 40 to 60 for even faster movement
+      rotationSpeed: 0.15, // Increased for better responsiveness
+      acceleration: 2.0, // Increased for faster acceleration
       health: 100,
       name: playerName
     });
     
+    // Initialize camera position to match player ship
+    this.cameraPosition = { ...this.playerShip.position };
+    
     console.log('Player ship initialized:', this.playerShip);
+    console.log('Camera position initialized:', this.cameraPosition);
     
     // Set up network event handlers
     this.setupNetworkHandlers();
@@ -84,7 +99,7 @@ class GameEngine {
           scale: { x: 1, y: 1 },
           maxSpeed: 5,
           rotationSpeed: 0.05,
-          acceleration: 0.1,
+          acceleration: 0.3,
           health: player.health,
           name: player.name
         });
@@ -125,7 +140,7 @@ class GameEngine {
             scale: { x: 1, y: 1 },
             maxSpeed: 5,
             rotationSpeed: 0.05,
-            acceleration: 0.1,
+            acceleration: 0.3,
             health: player.health,
             name: player.name
           });
@@ -171,6 +186,9 @@ class GameEngine {
     // Update physics
     this.updatePhysics(deltaTime);
     
+    // Update camera position
+    this.updateCamera(deltaTime);
+    
     // Send network updates
     this.sendNetworkUpdates(timestamp);
     
@@ -188,18 +206,66 @@ class GameEngine {
   private handleInput(deltaTime: number): void {
     const input = this.inputHandler.getInput();
     
-    // Apply throttle control (W/S keys)
-    if (input.throttleUp) {
-      this.playerShip.increaseSpeed(deltaTime);
-    } else if (input.throttleDown) {
-      this.playerShip.decreaseSpeed(deltaTime);
+    // Debug log all input states periodically
+    if (this.lastTimestamp % 60 === 0) {
+      console.log('Current input state:', JSON.stringify(input));
     }
     
-    // Apply steering (A/D keys)
-    if (input.turnLeft) {
-      this.playerShip.rotate(-this.playerShip.rotationSpeed * deltaTime);
-    } else if (input.turnRight) {
-      this.playerShip.rotate(this.playerShip.rotationSpeed * deltaTime);
+    // Track if input has changed to avoid continuous changes
+    let inputChanged = false;
+    
+    // Apply throttle control (W/S keys) using naval speed settings
+    if (input.throttleUp && !this.lastThrottleUp) {
+      // Increase speed setting (W key) - only on key press, not continuous
+      this.playerShip.increaseSpeedSetting();
+      inputChanged = true;
+      
+      // Debug log for throttle up
+      console.log(`Increasing speed: ${this.playerShip.getSpeedSettingName()}`);
+    } 
+    else if (input.throttleDown && !this.lastThrottleDown) {
+      // Decrease speed setting (S key) - only on key press, not continuous
+      this.playerShip.decreaseSpeedSetting();
+      inputChanged = true;
+      
+      // Debug log for throttle down
+      console.log(`Decreasing speed: ${this.playerShip.getSpeedSettingName()}`);
+    }
+    
+    // Apply steering (A/D keys) using naval rudder settings
+    if (input.turnLeft && !this.lastTurnLeft) {
+      // Turn rudder to port (A key) - only on key press, not continuous
+      this.playerShip.turnRudderPort();
+      inputChanged = true;
+      
+      console.log(`Turning port: ${this.playerShip.getRudderSettingName()}`);
+    } 
+    else if (input.turnRight && !this.lastTurnRight) {
+      // Turn rudder to starboard (D key) - only on key press, not continuous
+      this.playerShip.turnRudderStarboard();
+      inputChanged = true;
+      
+      console.log(`Turning starboard: ${this.playerShip.getRudderSettingName()}`);
+    }
+    else if (input.centerRudder && !this.lastCenterRudder) {
+      // Center rudder (Space key) - only on key press, not continuous
+      this.playerShip.centerRudder();
+      inputChanged = true;
+      
+      console.log(`Centering rudder: ${this.playerShip.getRudderSettingName()}`);
+    }
+    
+    // Store current input state for next frame
+    this.lastThrottleUp = input.throttleUp;
+    this.lastThrottleDown = input.throttleDown;
+    this.lastTurnLeft = input.turnLeft;
+    this.lastTurnRight = input.turnRight;
+    this.lastCenterRudder = input.centerRudder;
+    
+    // Debug log ship state when input changes
+    if (inputChanged) {
+      console.log(`Ship state: position=(${this.playerShip.position.x.toFixed(2)}, ${this.playerShip.position.y.toFixed(2)}), speed=${this.playerShip.currentSpeed.toFixed(2)}, rotation=${this.playerShip.rotation.toFixed(2)}`);
+      console.log(`Naval controls: Speed=${this.playerShip.getSpeedSettingName()}, Rudder=${this.playerShip.getRudderSettingName()}`);
     }
   }
   
@@ -218,6 +284,26 @@ class GameEngine {
     
     // Run physics simulation
     this.physicsEngine.update([this.playerShip, ...this.entities.values()], deltaTime);
+  }
+  
+  /**
+   * Updates the camera position to follow the player ship
+   * @param deltaTime Time since last frame in seconds
+   */
+  private updateCamera(deltaTime: number): void {
+    // Store old camera position for logging
+    const oldCameraX = this.cameraPosition.x;
+    const oldCameraY = this.cameraPosition.y;
+    
+    // Smoothly move the camera towards the player ship (lerp)
+    this.cameraPosition.x += (this.playerShip.position.x - this.cameraPosition.x) * this.cameraLerpFactor;
+    this.cameraPosition.y += (this.playerShip.position.y - this.cameraPosition.y) * this.cameraLerpFactor;
+    
+    // Log camera movement if significant
+    if (Math.abs(this.cameraPosition.x - oldCameraX) > 0.01 || Math.abs(this.cameraPosition.y - oldCameraY) > 0.01) {
+      console.log(`Camera moved: (${oldCameraX.toFixed(2)}, ${oldCameraY.toFixed(2)}) -> (${this.cameraPosition.x.toFixed(2)}, ${this.cameraPosition.y.toFixed(2)})`);
+      console.log(`Distance to ship: (${(this.playerShip.position.x - this.cameraPosition.x).toFixed(2)}, ${(this.playerShip.position.y - this.cameraPosition.y).toFixed(2)})`);
+    }
   }
   
   /**
@@ -244,19 +330,19 @@ class GameEngine {
     // Clear canvas
     this.renderer.clear();
     
-    // Render water background
-    this.renderer.renderWater(this.playerShip.position);
-    
-    // Debug logging for player ship position
-    console.log('Rendering player ship at position:', this.playerShip.position);
+    // Render background grid
+    this.renderer.renderBackground(this.cameraPosition);
     
     // Render player ship
-    this.renderer.renderEntity(this.playerShip, this.playerShip.position);
+    this.renderer.renderEntity(this.playerShip, this.cameraPosition);
     
     // Render other entities
     for (const entity of this.entities.values()) {
-      this.renderer.renderEntity(entity, this.playerShip.position);
+      this.renderer.renderEntity(entity, this.cameraPosition);
     }
+    
+    // Render HUD with naval controls
+    this.renderer.renderHUD(this.playerShip);
   }
   
   /**
