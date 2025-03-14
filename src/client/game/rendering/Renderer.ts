@@ -1,5 +1,6 @@
 import Ship from '../entities/Ship';
 import { Vector2 } from '@shared/types/Vector';
+import networkManager from '../../network/NetworkManager';
 
 /**
  * Renderer class for drawing the game world and entities
@@ -224,6 +225,9 @@ class Renderer {
     // Render the ship controls panel
     this.renderShipControlsPanel(playerShip);
     
+    // Render the player ranking in the upper right corner
+    this.renderPlayerRanking();
+    
     // Render the help box in the lower right corner
     this.renderHelpBox();
   }
@@ -286,6 +290,107 @@ class Renderer {
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.font = '12px Arial';
     this.ctx.fillText(playerShip.getRudderSettingName(), padding + 70, padding + 110);
+    
+    this.ctx.restore();
+  }
+  
+  /**
+   * Renders the player ranking in the upper right corner
+   */
+  private renderPlayerRanking(): void {
+    const padding = 15;
+    const panelWidth = 220;
+    const headerHeight = 40;
+    const rowHeight = 25;
+    const cornerRadius = 8;
+    
+    // Get all players from the network manager
+    const players = networkManager.getAllPlayers();
+    
+    // Sort players by score (descending)
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    
+    // Limit to 10 players
+    const displayPlayers = sortedPlayers.slice(0, 10);
+    
+    // Calculate panel height based on number of players
+    const panelHeight = headerHeight + (displayPlayers.length * rowHeight) + padding;
+    
+    // Position in upper right corner
+    const x = this.canvas.width - panelWidth - padding;
+    const y = padding;
+    
+    this.ctx.save();
+    
+    // Draw semi-transparent panel background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.roundRect(x, y, panelWidth, panelHeight, cornerRadius);
+    this.ctx.fill();
+    
+    // Draw panel border
+    this.ctx.strokeStyle = 'rgba(215, 120, 0, 0.7)'; // Orange border for ranking panel
+    this.ctx.lineWidth = 2;
+    this.roundRect(x, y, panelWidth, panelHeight, cornerRadius);
+    this.ctx.stroke();
+    
+    // Draw title
+    this.ctx.fillStyle = '#FFAA00'; // Orange for ranking title
+    this.ctx.font = 'bold 16px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('PLAYER RANKING', x + panelWidth / 2, y + 25);
+    
+    // Draw separator line
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + 5, y + headerHeight - 5);
+    this.ctx.lineTo(x + panelWidth - 5, y + headerHeight - 5);
+    this.ctx.stroke();
+    
+    // Draw column headers
+    this.ctx.fillStyle = '#FFCC33';
+    this.ctx.font = 'bold 12px Arial';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText('RANK', x + 15, y + headerHeight + 15);
+    this.ctx.fillText('NAME', x + 55, y + headerHeight + 15);
+    this.ctx.fillText('LVL', x + 155, y + headerHeight + 15);
+    this.ctx.fillText('KILLS', x + 185, y + headerHeight + 15);
+    
+    // Draw player rows
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.font = '12px Arial';
+    
+    // Highlight the local player
+    const localPlayer = networkManager.getLocalPlayer();
+    
+    displayPlayers.forEach((player, index) => {
+      const rowY = y + headerHeight + (index + 1) * rowHeight + 5;
+      const isLocalPlayer = player.id === localPlayer?.id;
+      
+      // Highlight background for local player
+      if (isLocalPlayer) {
+        this.ctx.fillStyle = 'rgba(255, 170, 0, 0.3)';
+        this.ctx.fillRect(x + 5, rowY - 15, panelWidth - 10, rowHeight);
+        this.ctx.fillStyle = '#FFFFFF';
+      }
+      
+      // Draw rank number
+      this.ctx.fillText(`${index + 1}.`, x + 15, rowY);
+      
+      // Draw player name (truncate if too long)
+      const displayName = player.name.length > 12 ? player.name.substring(0, 10) + '...' : player.name;
+      this.ctx.fillText(displayName, x + 55, rowY);
+      
+      // Draw level (hardcoded to 1 for now)
+      this.ctx.fillText('1', x + 155, rowY);
+      
+      // Draw kills (hardcoded to 0 for now)
+      this.ctx.fillText('0', x + 185, rowY);
+      
+      // Reset fill style after drawing local player
+      if (isLocalPlayer) {
+        this.ctx.fillStyle = '#FFFFFF';
+      }
+    });
     
     this.ctx.restore();
   }

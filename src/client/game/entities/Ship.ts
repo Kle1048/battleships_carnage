@@ -1,9 +1,9 @@
-import { Vector2 } from '@shared/types/Vector';
+import { Vector2, Vector } from '@shared/types/Vector';
 
 /**
  * Naval speed settings enum
  */
-enum NavalSpeed {
+export enum NavalSpeed {
   FULL_REVERSE = -0.6,  // 60% of max speed in reverse
   HALF_REVERSE = -0.3,  // 30% of max speed in reverse
   FULL_STOP = 0,
@@ -16,7 +16,7 @@ enum NavalSpeed {
 /**
  * Naval rudder settings enum
  */
-enum RudderSetting {
+export enum RudderSetting {
   HARD_PORT = -1.0,      // Full left
   HALF_PORT = -0.5,      // Half left
   MIDSHIPS = 0.0,        // Center
@@ -27,7 +27,7 @@ enum RudderSetting {
 /**
  * Ship configuration interface
  */
-interface ShipConfig {
+export interface ShipConfig {
   position: Vector2;
   rotation: number;
   scale: Vector2;
@@ -72,6 +72,9 @@ class Ship {
   private readonly OPTIMAL_TURN_SPEED: number = 0.6; // Speed at which turning is most effective (as a fraction of max speed)
   private readonly MIN_SPEED_FOR_TURNING: number = 0.05; // Minimum speed required for any turning (as a fraction of max speed)
   
+  // Debug flags
+  private readonly DEBUG_MOVEMENT: boolean = false;
+  
   /**
    * Creates a new ship entity
    * @param config Ship configuration
@@ -90,7 +93,9 @@ class Ship {
     const colors = ['#FF3366', '#33FF66', '#6633FF', '#FFCC33', '#33CCFF'];
     this.color = colors[Math.floor(Math.random() * colors.length)];
     
-    console.log(`Ship "${this.name}" created with color ${this.color} at position:`, this.position);
+    if (this.DEBUG_MOVEMENT) {
+      console.log(`Ship "${this.name}" created with color ${this.color} at position:`, this.position);
+    }
   }
   
   /**
@@ -111,20 +116,22 @@ class Ship {
     };
     
     // Debug log velocity and rotation
-    if (Math.abs(this.currentSpeed) > 0.1) {
+    if (this.DEBUG_MOVEMENT && Math.abs(this.currentSpeed) > 0.1) {
       console.log(`Ship velocity: (${this.velocity.x.toFixed(2)}, ${this.velocity.y.toFixed(2)}), rotation: ${this.rotation.toFixed(2)}, speed: ${this.currentSpeed.toFixed(2)}`);
     }
     
     // Update position based on velocity
-    const oldX = this.position.x;
-    const oldY = this.position.y;
+    const oldPosition = { ...this.position };
     
-    this.position.x += this.velocity.x * deltaTime;
-    this.position.y += this.velocity.y * deltaTime;
+    // Use Vector utility for position update
+    this.position = Vector.add(
+      this.position, 
+      Vector.multiply(this.velocity, deltaTime)
+    );
     
     // Log position change if significant movement occurred
-    if (Math.abs(this.position.x - oldX) > 0.1 || Math.abs(this.position.y - oldY) > 0.1) {
-      console.log(`Ship position updated: (${oldX.toFixed(2)}, ${oldY.toFixed(2)}) -> (${this.position.x.toFixed(2)}, ${this.position.y.toFixed(2)}), deltaTime: ${deltaTime.toFixed(4)}`);
+    if (this.DEBUG_MOVEMENT && Vector.distance(oldPosition, this.position) > 0.1) {
+      console.log(`Ship position updated: (${oldPosition.x.toFixed(2)}, ${oldPosition.y.toFixed(2)}) -> (${this.position.x.toFixed(2)}, ${this.position.y.toFixed(2)}), deltaTime: ${deltaTime.toFixed(4)}`);
     }
     
     // Apply drag to slow down the ship
@@ -154,7 +161,9 @@ class Ship {
         this.currentSpeed = Math.max(this.targetSpeed, this.currentSpeed - changeRate);
       }
       
-      console.log(`Ship speed adjusting: ${this.currentSpeed.toFixed(2)} → ${this.targetSpeed.toFixed(2)} (${this.getSpeedSettingName()})`);
+      if (this.DEBUG_MOVEMENT) {
+        console.log(`Ship speed adjusting: ${this.currentSpeed.toFixed(2)} → ${this.targetSpeed.toFixed(2)} (${this.getSpeedSettingName()})`);
+      }
     }
   }
   
@@ -169,7 +178,7 @@ class Ship {
     // No turning if the ship is not moving or moving too slowly
     if (absSpeed < this.MIN_SPEED_FOR_TURNING) {
       // If rudder is not centered, log that turning is not possible
-      if (this.rudderSetting !== RudderSetting.MIDSHIPS) {
+      if (this.DEBUG_MOVEMENT && this.rudderSetting !== RudderSetting.MIDSHIPS) {
         console.log(`Ship cannot turn: insufficient speed (${absSpeed.toFixed(2)} < ${this.MIN_SPEED_FOR_TURNING})`);
       }
       return;
@@ -200,16 +209,28 @@ class Ship {
       this.rotation += rotationAmount;
       
       // Normalize rotation to 0-2π
-      while (this.rotation < 0) {
-        this.rotation += Math.PI * 2;
-      }
-      while (this.rotation >= Math.PI * 2) {
-        this.rotation -= Math.PI * 2;
-      }
+      this.rotation = this.normalizeAngle(this.rotation);
       
       // Log turning information for debugging
-      console.log(`Ship turning: rudder=${this.rudderSetting.toFixed(2)}, turnFactor=${turnFactor.toFixed(2)}, speed=${absSpeed.toFixed(2)}`);
+      if (this.DEBUG_MOVEMENT) {
+        console.log(`Ship turning: rudder=${this.rudderSetting.toFixed(2)}, turnFactor=${turnFactor.toFixed(2)}, speed=${absSpeed.toFixed(2)}`);
+      }
     }
+  }
+  
+  /**
+   * Normalizes an angle to the range [0, 2π)
+   * @param angle Angle in radians
+   * @returns Normalized angle in radians
+   */
+  private normalizeAngle(angle: number): number {
+    while (angle < 0) {
+      angle += Math.PI * 2;
+    }
+    while (angle >= Math.PI * 2) {
+      angle -= Math.PI * 2;
+    }
+    return angle;
   }
   
   /**
@@ -218,7 +239,9 @@ class Ship {
    */
   public setSpeedSetting(setting: NavalSpeed): void {
     this.targetSpeedSetting = setting;
-    console.log(`Ship speed set to: ${this.getSpeedSettingName()}`);
+    if (this.DEBUG_MOVEMENT) {
+      console.log(`Ship speed set to: ${this.getSpeedSettingName()}`);
+    }
   }
   
   /**
@@ -314,7 +337,9 @@ class Ship {
    */
   public setRudderSetting(setting: RudderSetting): void {
     this.rudderSetting = setting;
-    console.log(`Ship rudder set to: ${this.getRudderSettingName()}`);
+    if (this.DEBUG_MOVEMENT) {
+      console.log(`Ship rudder set to: ${this.getRudderSettingName()}`);
+    }
   }
   
   /**
@@ -394,6 +419,7 @@ class Ship {
   /**
    * Legacy method for backward compatibility
    * @param deltaTime Time since last frame in seconds
+   * @deprecated Use increaseSpeedSetting() instead
    */
   public increaseSpeed(deltaTime: number): void {
     this.increaseSpeedSetting();
@@ -402,6 +428,7 @@ class Ship {
   /**
    * Legacy method for backward compatibility
    * @param deltaTime Time since last frame in seconds
+   * @deprecated Use decreaseSpeedSetting() instead
    */
   public decreaseSpeed(deltaTime: number): void {
     this.decreaseSpeedSetting();
@@ -410,6 +437,7 @@ class Ship {
   /**
    * Legacy method for backward compatibility
    * @param amount Amount to rotate in radians
+   * @deprecated Use turnRudderPort(), turnRudderStarboard(), or centerRudder() instead
    */
   public rotate(amount: number): void {
     if (amount < 0) {
